@@ -1,4 +1,4 @@
-// db.js - Dexie IndexedDB wrapper
+﻿// db.js - Dexie IndexedDB wrapper
 // Depends on: Dexie (global)
 
 const ROUTE_COLORS = [
@@ -29,5 +29,9 @@ var AppDB = (function() {
     return ROUTE_COLORS[count % ROUTE_COLORS.length];
   }
 
-  return { db, getAllActivities, addActivity, deleteActivity, getNextColor };
+  async function deleteActivities(ids) {
+    return db.activities.bulkDelete(ids);
+  }
+
+  return { db, getAllActivities, addActivity, deleteActivity, deleteActivities, getNextColor };
 })();

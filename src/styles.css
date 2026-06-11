@@ -1,4 +1,4 @@
-/* === Design Tokens === */
+﻿/* === Design Tokens === */
 :root {
   --bg-primary: #1a1a2e;
   --bg-panel: #16213e;
@@ -237,6 +237,10 @@ body {
   position: relative;
 }
 .activity-card:hover { background: var(--bg-hover); }
+.activity-card--selected {
+  background: rgba(252, 82, 0, 0.08) !important;
+  border-color: var(--accent) !important;
+}
 .activity-card--active {
   background: var(--bg-hover);
   box-shadow: inset 2px 0 0 var(--accent);

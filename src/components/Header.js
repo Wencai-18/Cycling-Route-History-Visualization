@@ -75,6 +75,14 @@ function Header(props) {
         )
       ),
 
+      // iGPSPORT
+      React.createElement('button', {
+        className: 'btn btn--ghost btn--sm',
+        onClick: props.onOpenIGPSPORT,
+        style: { marginRight: 8 },
+        title: '从 iGPSPORT 导入活动',
+      }, '\uD83D\uDCE1 iGPSPORT'),
+
       // Strava
       stravaConnected ? (
         React.createElement(React.Fragment, null,

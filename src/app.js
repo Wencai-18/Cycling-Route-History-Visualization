@@ -1,4 +1,4 @@
-// app.js - Main application entry point
+﻿// app.js - Main application entry point
 // Depends on: React, ReactDOM, AppDB, GPXParser, FITParser, StravaService
 // Depends on: Header, Sidebar, MapView, ActivityDetail (all global functions)
 
@@ -18,6 +18,7 @@
     const [viewMode, setViewMode] = useState('routes');
     const [heatmapColor, setHeatmapColor] = useState('#fc5200');
     const [heatmapOpacity, setHeatmapOpacity] = useState(0.15);
+    const [igpsportOpen, setIgpsportOpen] = useState(false);
 
     // Load from DB
     useEffect(function() {
@@ -108,6 +109,14 @@
       showToast('路线已删除');
     }, []);
 
+    const handleBatchDelete = useCallback(async function(ids) {
+      if (!ids || ids.length === 0) return;
+      await AppDB.deleteActivities(ids);
+      setActivities(function(prev) { return prev.filter(function(a) { return ids.indexOf(Number(a.id)) === -1; }); });
+      setSelectedActivity(function(prev) { return ids.indexOf(prev?.id) >= 0 ? null : prev; });
+      showToast('已删除 ' + ids.length + ' 条路线');
+    }, []);
+
     // Strava connect
     const handleConnectStrava = useCallback(function() {
       setStravaModal(true);
@@ -179,12 +188,13 @@
         heatmapOpacity: heatmapOpacity,
         onHeatmapColorChange: setHeatmapColor,
         onHeatmapOpacityChange: setHeatmapOpacity,
+        onOpenIGPSPORT: function() { setIgpsportOpen(true); },
       }),
       // Body
       React.createElement('div', { className: 'app-body' },
         React.createElement(Sidebar, {
           activities: activities, selectedId: selectedActivity?.id,
-          onSelect: handleSelectActivity, onDelete: handleDeleteActivity,
+          onSelect: handleSelectActivity, onDelete: handleDeleteActivity, onBatchDelete: handleBatchDelete,
           onFilesDrop: handleFilesDrop, loading: loading,
         }),
         React.createElement(MapView, {
@@ -226,6 +236,11 @@
           )
         )
       ),
+      // iGPSPORT Panel
+      igpsportOpen && React.createElement(iGPSPORTPanel, {
+        onImport: function(files) { handleFilesDrop(files); },
+        onClose: function() { setIgpsportOpen(false); },
+      }),
       // Toast
       toast && React.createElement('div', { className: 'toast' + (toast.type ? ' toast--' + toast.type : '') }, toast.message),
       // Loading overlay

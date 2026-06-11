@@ -1,4 +1,4 @@
-// MapView.js - Leaflet map with route overlays (v2)
+﻿// MapView.js - Leaflet map with route overlays (v2)
 // Depends on: React, L (Leaflet global)
 
 function MapView(props) {
@@ -7,6 +7,7 @@ function MapView(props) {
   const containerRef = React.useRef(null);
   const mapRef = React.useRef(null);
   const layersRef = React.useRef([]);
+  const prevActivityCountRef = React.useRef(0);
 
   // Initialize map
   React.useEffect(function() {
@@ -89,9 +90,11 @@ function MapView(props) {
       }
     });
 
-    if (allCoords.length > 0) {
+    // Only auto-fit when activities change (count differs), not on color/opacity changes
+    if (allCoords.length > 0 && activities.length !== prevActivityCountRef.current) {
       map.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40] });
     }
+    prevActivityCountRef.current = activities.length;
   }, [activities, selectedId, onSelectActivity, viewMode, props.heatmapColor, props.heatmapOpacity]);
 
   return React.createElement('div', { className: 'map-area' },

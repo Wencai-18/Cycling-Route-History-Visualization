@@ -1,24 +1,35 @@
-@echo off
-chcp 65001 >nul
-title 骑行路线可视化 - 服务器
+﻿@echo off
+title Cycling Route Visualizer
+
+set "NODE=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
+if not exist "%NODE%" set "NODE=node"
+
+REM Strip trailing backslash to avoid quote escaping
+set "ROOT=%~dp0"
+if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
 echo.
-echo  ╔══════════════════════════════════════╗
-echo  ║    骑行路线可视化                    ║
-echo  ║    Cycling Route Visualizer          ║
-echo  ╚══════════════════════════════════════╝
+echo ========================================
+echo    Cycling Route Visualizer
+echo ========================================
 echo.
-echo  服务器启动中...
+echo Starting server on http://127.0.0.1:5173 ...
 echo.
 
-set NODE=C:\Users\12833\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe
-set WORKSPACE=C:\Users\12833\Documents\骑行历史可视化
+start "Cycling Server" /min "%NODE%" "%ROOT%\server.js" "%ROOT%"
 
+echo Waiting for server...
+set RETRIES=0
+:check
+timeout /t 1 /nobreak >nul 2>&1
+set /a RETRIES+=1
+curl -s -o NUL http://127.0.0.1:5173 2>nul
+if %ERRORLEVEL% EQU 0 goto ready
+if %RETRIES% LSS 15 goto check
+
+:ready
+echo Server is ready! Opening browser...
 start "" http://127.0.0.1:5173
-
-echo  地址: http://127.0.0.1:5173
-echo  按 Ctrl+C 或关闭此窗口停止服务器
 echo.
-"%NODE%" "%WORKSPACE%\server.js" "%WORKSPACE%"
-
+echo Close this window when done.
 pause
