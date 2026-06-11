@@ -1,6 +1,9 @@
 ﻿# 🚴 骑行路线可视化
 
 将 GPX/FIT 骑行记录、Strava 活动数据或 iGPSPORT 历史记录叠加到交互式地图上，支持路线模式和热力图模式。
+<img width="3826" height="1896" alt="QQ20260611-222605" src="https://github.com/user-attachments/assets/4f9ceec2-a056-41dc-9739-dbed6913109f" />
+<img width="3842" height="1894" alt="QQ20260611-222514" src="https://github.com/user-attachments/assets/5af29398-82cd-47c8-b8a4-4b6505b68dc3" />
+
 
 ## 功能
 
