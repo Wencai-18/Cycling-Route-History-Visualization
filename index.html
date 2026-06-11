@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>骑行路线可视化</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="src/styles.css?v=13" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/dexie@4.0.11/dist/dexie.min.js"></script>
+  <script src="https://unpkg.com/@mapbox/polyline@1.2.1/src/polyline.js"></script>
+</head>
+<body class="dark">
+  <div id="root"></div>
+  <script src="src/lib/gpx-parser.js?v=13"></script>
+  <script src="src/lib/fit-parser.js?v=13"></script>
+  <script src="src/lib/strava.js?v=13"></script>
+  <script src="src/lib/db.js?v=13"></script>
+  <script src="src/components/Header.js?v=13"></script>
+  <script src="src/components/Sidebar.js?v=13"></script>
+  <script src="src/components/MapView.js?v=13"></script>
+  <script src="src/components/ActivityDetail.js?v=13"></script>
+  <script src="src/app.js?v=13"></script>
+</body>
+</html>
