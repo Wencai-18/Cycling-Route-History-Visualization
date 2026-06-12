@@ -12,6 +12,7 @@
     const [toast, setToast] = useState(null);
     const [stravaModal, setStravaModal] = useState(false);
     const [clientIdInput, setClientIdInput] = useState('');
+    const [clientSecretInput, setClientSecretInput] = useState('');
     const [stravaConnected, setStravaConnected] = useState(false);
     const [athlete, setAthlete] = useState(null);
     const [importingStrava, setImportingStrava] = useState(false);
@@ -19,6 +20,7 @@
     const [heatmapColor, setHeatmapColor] = useState('#fc5200');
     const [heatmapOpacity, setHeatmapOpacity] = useState(0.15);
     const [igpsportOpen, setIgpsportOpen] = useState(false);
+    const [hiddenIds, setHiddenIds] = useState({});
 
     // Load from DB
     useEffect(function() {
@@ -31,6 +33,7 @@
       const token = StravaService.getToken();
       if (token?.athlete) setAthlete(token.athlete);
       setClientIdInput(StravaService.getClientId());
+      setClientSecretInput(StravaService.getClientSecret() || '');
     }, []);
 
     // Handle OAuth callback
@@ -117,6 +120,18 @@
       showToast('已删除 ' + ids.length + ' 条路线');
     }, []);
 
+    const handleToggleVisibility = useCallback(function(id) {
+      setHiddenIds(function(prev) { var h = {}; Object.assign(h, prev); h[id] = !h[id]; return h; });
+    }, []);
+
+    const handleBatchToggleVisibility = useCallback(function(ids, hide) {
+      setHiddenIds(function(prev) {
+        var h = {}; Object.assign(h, prev);
+        ids.forEach(function(id) { h[id] = hide; });
+        return h;
+      });
+    }, []);
+
     // Strava connect
     const handleConnectStrava = useCallback(function() {
       setStravaModal(true);
@@ -125,8 +140,8 @@
     const handleStravaModalConfirm = useCallback(function() {
       if (!clientIdInput.trim()) { showToast('请输入 Strava Client ID', 'error'); return; }
       setStravaModal(false);
-      StravaService.startStravaAuth(clientIdInput.trim());
-    }, [clientIdInput]);
+      StravaService.startStravaAuth(clientIdInput.trim(), clientSecretInput.trim());
+    }, [clientIdInput, clientSecretInput]);
 
     const handleDisconnectStrava = useCallback(function() {
       StravaService.disconnect();
@@ -177,7 +192,9 @@
 
     return React.createElement('div', { className: 'app-shell' },
       // Header
-      React.createElement(Header, {
+              React.createElement(Header, {
+          activities: activities,
+          hiddenIds: hiddenIds,
         stravaConnected: stravaConnected,
         onConnectStrava: handleConnectStrava,
         onDisconnectStrava: handleDisconnectStrava,
@@ -195,10 +212,12 @@
         React.createElement(Sidebar, {
           activities: activities, selectedId: selectedActivity?.id,
           onSelect: handleSelectActivity, onDelete: handleDeleteActivity, onBatchDelete: handleBatchDelete,
+          hiddenIds: hiddenIds, onToggleVisibility: handleToggleVisibility, onBatchToggleVisibility: handleBatchToggleVisibility,
           onFilesDrop: handleFilesDrop, loading: loading,
         }),
         React.createElement(MapView, {
           activities: activities, selectedId: selectedActivity?.id,
+          hiddenIds: hiddenIds,
           onSelectActivity: handleSelectActivity,
           viewMode: viewMode,
           heatmapColor: heatmapColor,
@@ -214,16 +233,17 @@
         React.createElement('div', { className: 'modal', onClick: function(e) { e.stopPropagation(); } },
           React.createElement('div', { className: 'modal__title' }, '连接 Strava'),
           React.createElement('div', { className: 'modal__desc' },
-            '请输入你的 Strava API 应用 Client ID。',
+            '请输入你的 Strava API 应用 Client ID（纯数字，如 123456）。',
             React.createElement('br'),
             '前往 ',
             React.createElement('a', { href: 'https://www.strava.com/settings/api', target: '_blank', rel: 'noopener', style: { color: 'var(--accent)' } }, 'strava.com/settings/api'),
             ' 创建应用，回调域名设为：',
-            React.createElement('code', { style: { display:'block', marginTop:6, padding:'4px 8px', background:'var(--bg-input)', borderRadius:4, fontSize:12, color:'var(--text-secondary)' } },
+            React.createElement('code', { style: { display:'block', marginTop:8, padding:'6px 10px', background:'var(--bg-hover)', borderRadius:4, fontSize:13, color:'var(--accent)', fontWeight:600, fontFamily:'monospace' } },
               window.location.origin
-            )
-          ),
-          React.createElement('input', {
+            ),
+          React.createElement('div', { style: { marginTop:8, fontSize:11, color:'var(--danger)' } }, '\u26A0 回调域名必须与 Strava 应用设置中输入的完全一致，否则会报 Bad Request 错误')
+        ),
+        React.createElement('input', {
             className: 'modal__input', type: 'text', placeholder: '输入 Client ID...',
             value: clientIdInput,
             onChange: function(e) { setClientIdInput(e.target.value); },

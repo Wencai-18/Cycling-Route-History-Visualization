@@ -1,9 +1,44 @@
-// Header.js - Top navigation bar with mode toggle & settings
+﻿// Header.js - Top navigation bar with mode toggle & settings
 // Depends on: React (global)
 
 function Header(props) {
-  const { stravaConnected, onConnectStrava, onDisconnectStrava, athlete, viewMode, onToggleMode, heatmapColor, heatmapOpacity, onHeatmapColorChange, onHeatmapOpacityChange } = props;
+  const { stravaConnected, onConnectStrava, onDisconnectStrava, athlete, viewMode, onToggleMode, heatmapColor, heatmapOpacity, onHeatmapColorChange, onHeatmapOpacityChange, activities, hiddenIds } = props;
   const [showSettings, setShowSettings] = React.useState(false);
+
+  function calcAutoOpacity() {
+    if (!activities || activities.length === 0) return;
+    var grid = {};
+    var maxCount = 0;
+    activities.forEach(function(a) {
+      if (hiddenIds && hiddenIds[a.id]) return;
+      var feat = a.routeGeoJSON && a.routeGeoJSON.features && a.routeGeoJSON.features[0];
+      if (!feat || !feat.geometry || !feat.geometry.coordinates) return;
+      var coords = feat.geometry.coordinates;
+      // Sample every 10th point to avoid counting consecutive GPS points as overlap
+      // Grid ~100m (0.001 deg) for counting unique routes per cell
+      var step = Math.max(1, Math.floor(coords.length / 200));
+      var lastKey = '';
+      for (var i = 0; i < coords.length; i += step) {
+        if (!coords[i] || coords[i].length < 2) continue;
+        var key = (Math.round(coords[i][1] * 1000) / 1000).toFixed(3) + ',' + (Math.round(coords[i][0] * 1000) / 1000).toFixed(3);
+        // Skip if same cell as previous (within same route)
+        if (key === lastKey) continue;
+        lastKey = key;
+        // Use a Set per grid cell for unique route counting
+        if (!grid[key]) grid[key] = {};
+        grid[key][a.id] = true;
+        var count = Object.keys(grid[key]).length;
+        if (count > maxCount) maxCount = count;
+      }
+    });
+    if (maxCount > 0) {
+      // Use alpha compositing formula: target 90% visual opacity at max overlap
+      // p = 1 - (1-target)^(1/N) where target=0.9, capped at 0.8 for single routes
+      var auto = Math.min(0.8, 1 - Math.pow(0.1, 1 / maxCount));
+      auto = Math.max(0.03, auto);
+      onHeatmapOpacityChange(auto);
+    }
+  }
 
   React.useEffect(function() {
     if (!showSettings) return;
@@ -64,7 +99,11 @@ function Header(props) {
                 type: 'range', min: 3, max: 100, value: (heatmapOpacity != null ? heatmapOpacity : 0.15) * 100,
                 onChange: function(e) { onHeatmapOpacityChange(parseInt(e.target.value) / 100); },
                 style: { width: '100%', accentColor: 'var(--accent)' },
-              })
+              }),
+              React.createElement('button', {
+                onClick: calcAutoOpacity,
+                style: { marginTop: 6, width: '100%', padding: '4px 0', border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)', background: 'transparent', color: 'var(--accent)', fontSize: 11, cursor: 'pointer' }
+              }, 'Auto - 自动适配透明度')
             )
           )
         ) : (
@@ -77,11 +116,16 @@ function Header(props) {
 
       // iGPSPORT
       React.createElement('button', {
-        className: 'btn btn--ghost btn--sm',
+        className: 'btn btn--primary',
         onClick: props.onOpenIGPSPORT,
         style: { marginRight: 8 },
         title: '从 iGPSPORT 导入活动',
-      }, '\uD83D\uDCE1 iGPSPORT'),
+      },
+        React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+          React.createElement('path', { d: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' })
+        ),
+        ' iGPSPORT'
+      ),
 
       // Strava
       stravaConnected ? (

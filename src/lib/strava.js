@@ -1,4 +1,4 @@
-// strava.js - Strava PKCE OAuth + API integration
+﻿// strava.js - Strava PKCE OAuth + API integration
 // Depends on: polyline (global)
 
 var StravaService = (function() {
@@ -9,11 +9,16 @@ var StravaService = (function() {
   const STORAGE_KEY_TOKEN = 'strava_token';
   const STORAGE_KEY_VERIFIER = 'strava_code_verifier';
   const STORAGE_KEY_CLIENT_ID = 'strava_client_id';
+  const STORAGE_KEY_CLIENT_SECRET = 'strava_client_secret';
 
   function generateCodeVerifier() {
     const array = new Uint8Array(64);
     crypto.getRandomValues(array);
-    return btoa(String.fromCharCode.apply(null, array))
+    var bin = '';
+    for (var i = 0; i < array.length; i++) {
+      bin += String.fromCharCode(array[i]);
+    }
+    return btoa(bin)
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').substring(0, 128);
   }
 
@@ -21,12 +26,19 @@ var StravaService = (function() {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
     const hash = await crypto.subtle.digest('SHA-256', data);
-    return btoa(String.fromCharCode.apply(null, new Uint8Array(hash)))
+    var hashArray = new Uint8Array(hash);
+    var bin = '';
+    for (var i = 0; i < hashArray.length; i++) {
+      bin += String.fromCharCode(hashArray[i]);
+    }
+    return btoa(bin)
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
   function getClientId() { return localStorage.getItem(STORAGE_KEY_CLIENT_ID) || ''; }
   function setClientId(id) { localStorage.setItem(STORAGE_KEY_CLIENT_ID, id); }
+  function getClientSecret() { return localStorage.getItem(STORAGE_KEY_CLIENT_SECRET) || ''; }
+  function setClientSecret(s) { localStorage.setItem(STORAGE_KEY_CLIENT_SECRET, s); }
 
   function isConnected() {
     const tokenData = getToken();
@@ -41,16 +53,17 @@ var StravaService = (function() {
 
   function setToken(token) { localStorage.setItem(STORAGE_KEY_TOKEN, JSON.stringify(token)); }
 
-  async function startStravaAuth(clientId) {
-    setClientId(clientId);
-    const verifier = generateCodeVerifier();
-    const challenge = await generateCodeChallenge(verifier);
-    localStorage.setItem(STORAGE_KEY_VERIFIER, verifier);
+  async function startStravaAuth(clientId, clientSecret) {
+    if (!clientId || !/^\d+$/.test(clientId.trim())) {
+      throw new Error('Client ID 格式无效，请输入纯数字的 Strava Client ID');
+    }
+    setClientId(clientId.trim());
+    if (clientSecret) setClientSecret(clientSecret.trim());
     const redirectUri = window.location.origin + window.location.pathname;
+    console.log('Strava redirect_uri:', redirectUri);
     const params = new URLSearchParams({
-      client_id: clientId, response_type: 'code', redirect_uri: redirectUri,
+      client_id: clientId.trim(), response_type: 'code', redirect_uri: redirectUri,
       approval_prompt: 'auto', scope: 'read,activity:read_all',
-      code_challenge_method: 'S256', code_challenge: challenge,
     });
     window.location.href = STRAVA_AUTH_URL + '?' + params.toString();
   }
@@ -60,13 +73,24 @@ var StravaService = (function() {
     if (!verifier) throw new Error('OAuth verifier 未找到');
     const clientId = getClientId();
     if (!clientId) throw new Error('请先设置 Strava Client ID');
+    const redirectUri = window.location.origin + window.location.pathname;
+
+    var params = new URLSearchParams();
+    params.append('client_id', clientId);
+    params.append('client_secret', getClientSecret());
+    params.append('code', code);
+    params.append('grant_type', 'authorization_code');
 
     const resp = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientId, code: code, code_verifier: verifier, grant_type: 'authorization_code' }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
     });
-    if (!resp.ok) throw new Error('Token 交换失败');
+    if (!resp.ok) {
+      var errBody = '';
+      try { errBody = await resp.text(); } catch(e) {}
+      throw new Error('Token 交换失败 (HTTP ' + resp.status + ': ' + errBody + ')');
+    }
     const token = await resp.json();
     setToken(token);
     localStorage.removeItem(STORAGE_KEY_VERIFIER);
@@ -76,10 +100,14 @@ var StravaService = (function() {
   async function refreshToken() {
     const token = getToken();
     if (!token?.refresh_token) throw new Error('无 refresh token');
+    var rparams = new URLSearchParams();
+    rparams.append('client_id', getClientId());
+    rparams.append('grant_type', 'refresh_token');
+    rparams.append('refresh_token', token.refresh_token);
     const resp = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: getClientId(), grant_type: 'refresh_token', refresh_token: token.refresh_token }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: rparams.toString(),
     });
     if (!resp.ok) throw new Error('Token 刷新失败');
     const newToken = await resp.json();
@@ -148,10 +176,12 @@ var StravaService = (function() {
   function disconnect() {
     localStorage.removeItem(STORAGE_KEY_TOKEN);
     localStorage.removeItem(STORAGE_KEY_VERIFIER);
+    localStorage.removeItem(STORAGE_KEY_CLIENT_SECRET);
   }
 
   return {
-    getClientId, setClientId, isConnected, getToken, startStravaAuth,
+    getClientId, setClientId, getClientSecret, setClientSecret,
+    isConnected, getToken, startStravaAuth,
     handleStravaCallback, fetchActivities, fetchActivityStreams,
     convertStravaActivity, disconnect,
   };

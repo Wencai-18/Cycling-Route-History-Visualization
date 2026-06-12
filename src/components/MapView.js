@@ -2,7 +2,7 @@
 // Depends on: React, L (Leaflet global)
 
 function MapView(props) {
-  const { activities, selectedId, onSelectActivity, viewMode } = props;
+  const { activities, selectedId, onSelectActivity, viewMode, hiddenIds } = props;
   var heatmap = viewMode === "heatmap";
   const containerRef = React.useRef(null);
   const mapRef = React.useRef(null);
@@ -44,7 +44,7 @@ function MapView(props) {
 
     const allCoords = [];
 
-    activities.forEach(function(activity) {
+    activities.forEach(function(activity) { if (hiddenIds && hiddenIds[activity.id]) return;
       const feature = activity.routeGeoJSON && activity.routeGeoJSON.features && activity.routeGeoJSON.features[0];
       if (!feature || !feature.geometry || !feature.geometry.coordinates || !feature.geometry.coordinates.length) return;
 
@@ -95,7 +95,7 @@ function MapView(props) {
       map.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40] });
     }
     prevActivityCountRef.current = activities.length;
-  }, [activities, selectedId, onSelectActivity, viewMode, props.heatmapColor, props.heatmapOpacity]);
+  }, [activities, selectedId, onSelectActivity, viewMode, props.heatmapColor, props.heatmapOpacity, hiddenIds]);
 
   return React.createElement('div', { className: 'map-area' },
     React.createElement('div', { className: 'map-area__container', ref: containerRef }),
